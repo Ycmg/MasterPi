@@ -49,19 +49,19 @@ def load_config():
     global lab_data
     lab_data = yaml_handle.get_yaml_data(yaml_handle.lab_file_path)
 
-# 初始位置
+    
 def initMove():
     MotorStop()
     Board.setPWMServoPulse(1, 1500, 800)
     AK.setPitchRangeMoving((0, 7.5, 8.5), -70, -90, 0, 1500)
      
-# 初始化调用
+
 def init():
     print("IntelligentSorting Init")
     initMove()
     load_config()
 
-# 开始玩法调用
+
 def start():
     global __isRunning
     __isRunning = True
@@ -79,20 +79,18 @@ def MotorStop():
     Board.setMotor(4, 0)
 
     
-# 找出面积最大的轮廓
-# 参数为要比较的轮廓的列表
 def getAreaMaxContour(contours):
     contour_area_max = 0
     contour_area_temp = 0
     area_max_contour = None
-    for c in contours:  # 历遍所有轮廓
-        contour_area_temp = math.fabs(cv2.contourArea(c))  # 计算轮廓面积
+    for c in contours:  
+        contour_area_temp = math.fabs(cv2.contourArea(c))  
         if contour_area_temp > contour_area_max:
             contour_area_max = contour_area_temp
-            if contour_area_temp >= 5:  # 只有在面积大于300时，最大面积的轮廓才是有效的，以过滤干扰
+            if contour_area_temp >= 5:  
                 area_max_contour = c
 
-    return area_max_contour, contour_area_max  # 返回最大的轮廓
+    return area_max_contour, contour_area_max  
 
 def move():
     global color_num
@@ -115,16 +113,16 @@ def move():
         if detect_step == 'line':  
             if line_centerx > 0 and line_centery > 0:
                 num = (line_centerx - LINE_CENTER_X)
-                if abs(num) <= 10:  # 偏差比较小，不进行处理
+                if abs(num) <= 10:  
                     line_pid.SetPoint = num
                 else:
                     line_pid.SetPoint = 0
                 line_pid.update(num) 
-                tmp = line_pid.output    # 获取PID输出值
+                tmp = line_pid.output   
                 tmp = 100 if tmp > 100 else tmp   
                 tmp = -100 if tmp < -100 else tmp
-                base_speed = Misc.map(tmp, -100, 100, -50, 50)  # 速度进行映射
-                Board.setMotor(1, int(42-base_speed))           # 设置马达速度
+                base_speed = Misc.map(tmp, -100, 100, -50, 50) 
+                Board.setMotor(1, int(42-base_speed))           
                 Board.setMotor(2, int(42+base_speed))
                 Board.setMotor(3, int(42-base_speed))
                 Board.setMotor(4, int(42+base_speed))
@@ -204,23 +202,23 @@ def ColorDetect(img,color):
     img_h, img_w = img.shape[:2]
     frame_resize = cv2.resize(img_copy, size, interpolation=cv2.INTER_NEAREST)
     frame_gb = cv2.GaussianBlur(frame_resize, (3, 3), 3)
-    frame_lab = cv2.cvtColor(frame_gb, cv2.COLOR_BGR2LAB)  # 将图像转换到LAB空间
+    frame_lab = cv2.cvtColor(frame_gb, cv2.COLOR_BGR2LAB) 
     if color in lab_data:
         frame_mask = cv2.inRange(frame_lab,(lab_data[color]['min'][0],lab_data[color]['min'][1],lab_data[color]['min'][2]),
-                                (lab_data[color]['max'][0],lab_data[color]['max'][1],lab_data[color]['max'][2])) #对原图像和掩模进行位运算
-        opened = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))  # 开运算
-        closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))  # 闭运算
-        contours = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]  # 找出轮廓
-        areaMaxContour, area_max = getAreaMaxContour(contours)  # 找出最大轮廓
-        if area_max > 2000:  # 有找到最大面积
+                                (lab_data[color]['max'][0],lab_data[color]['max'][1],lab_data[color]['max'][2])) 
+        opened = cv2.morphologyEx(frame_mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)) 
+        closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))  
+        contours = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2] 
+        areaMaxContour, area_max = getAreaMaxContour(contours) 
+        if area_max > 2000: 
             rect = cv2.minAreaRect(areaMaxContour)
             box = np.int0(cv2.boxPoints(rect))
             cv2.drawContours(img, [box], -1, range_rgb[color], 2)
             pt1_x, pt1_y = box[0, 0], box[0, 1]
             pt3_x, pt3_y = box[2, 0], box[2, 1]
-            color_centerx, color_centery = (pt1_x+pt3_x)/2, (pt1_y+pt3_y)/2  #中心点
+            color_centerx, color_centery = (pt1_x+pt3_x)/2, (pt1_y+pt3_y)/2  
             cv2.putText(img, "Color: " + detect_color, (10, img.shape[0] - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, range_rgb[color], 2) # 把检测到的颜色打印在画面上
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, range_rgb[color], 2) 
             color_exist = True
             detect_num += 1
             if detect_num >= 3:
@@ -255,42 +253,38 @@ def LineDetect(img):
     img_h, img_w = img.shape[:2]
     frame_resize = cv2.resize(img_copy, size, interpolation=cv2.INTER_NEAREST)
     frame_gb = cv2.GaussianBlur(frame_resize, (3, 3), 3)         
-    #将图像分割成上中下三个部分，这样处理速度会更快，更精确
     for r in roi:
         roi_h = roi_h_list[n]
         n += 1
         blobs = frame_gb[r[0]:r[1], r[2]:r[3]]
-        frame_lab = cv2.cvtColor(blobs, cv2.COLOR_BGR2LAB)  # 将图像转换到LAB空间
+        frame_lab = cv2.cvtColor(blobs, cv2.COLOR_BGR2LAB) 
         if line_color in lab_data:
             frame_mask = cv2.inRange(frame_lab,(lab_data[line_color]['min'][0],lab_data[line_color]['min'][1],lab_data[line_color]['min'][2]),
-                                    (lab_data[line_color]['max'][0],lab_data[line_color]['max'][1],lab_data[line_color]['max'][2])) #对原图像和掩模进行位运算
-            eroded = cv2.erode(frame_mask, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)))  #腐蚀
-            dilated = cv2.dilate(eroded, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))) #膨胀
-        cnts = cv2.findContours(dilated , cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)[-2]#找出所有轮廓
-        cnt_large, area = getAreaMaxContour(cnts)#找到最大面积的轮廓
+                                    (lab_data[line_color]['max'][0],lab_data[line_color]['max'][1],lab_data[line_color]['max'][2])) 
+            eroded = cv2.erode(frame_mask, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)))  
+            dilated = cv2.dilate(eroded, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))) 
+        cnts = cv2.findContours(dilated , cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)[-2]
+        cnt_large, area = getAreaMaxContour(cnts)
         if area >= 300: 
-            rect = cv2.minAreaRect(cnt_large)#最小外接矩形
-            box = np.int0(cv2.boxPoints(rect))#最小外接矩形的四个顶点
+            rect = cv2.minAreaRect(cnt_large)
+            box = np.int0(cv2.boxPoints(rect))
             for i in range(4):
                 box[i, 1] = box[i, 1] + (n - 1)*roi_h + roi[0][0]
                 box[i, 1] = int(Misc.map(box[i, 1], 0, size[1], 0, img_h))
                 box[i, 0] = int(Misc.map(box[i, 0], 0, size[0], 0, img_w))
 
-            cv2.drawContours(img, [box], -1, (0,0,255,255), 2)#画出四个点组成的矩形
-            #获取矩形的对角点
+            cv2.drawContours(img, [box], -1, (0,0,255,255), 2)
             pt1_x, pt1_y = box[0, 0], box[0, 1]
             pt3_x, pt3_y = box[2, 0], box[2, 1]
             line_width = int(abs(pt1_x - pt3_x))
-            color_centerx, color_centery = (pt1_x + pt3_x) / 2, (pt1_y + pt3_y) / 2#中心点       
-            cv2.circle(img, (int(color_centerx), int(color_centery)), 5, (0,0,255), -1)#画出中心点         
-            #按权重不同对上中下三个中心点进行求和
+            color_centerx, color_centery = (pt1_x + pt3_x) / 2, (pt1_y + pt3_y) / 2     
+            cv2.circle(img, (int(color_centerx), int(color_centery)), 5, (0,0,255), -1)        
             centroid_x_sum += color_centerx * r[4]
             weight_sum += r[4]
-    if weight_sum is not 0:
-        #求最终得到的中心点
+    if weight_sum is not 0：
         line_centery = int(color_centery)
         line_centerx = int(centroid_x_sum / weight_sum) 
-        cv2.circle(img, (line_centerx, int(color_centery)), 10, (0,255,255), -1)#画出中心点 
+        cv2.circle(img, (line_centerx, int(color_centery)), 10, (0,255,255), -1)
     else:
         line_centerx = -1
         
@@ -314,14 +308,12 @@ def run(img):
         
     return img
 
-# 关闭检测函数
 def stop(signum, frame):
     global __isRunning
     
     __isRunning = False
     time.sleep(0.2)
     MotorStop()
-    print('关闭中...')
     
 signal.signal(signal.SIGINT, stop)
 
@@ -329,7 +321,6 @@ if __name__ == '__main__':
     
     init()
     start()
-    # 运行子线程
     th = threading.Thread(target=move, daemon=True)
     th.start()
     cap = cv2.VideoCapture('http://127.0.0.1:8080?action=stream')
